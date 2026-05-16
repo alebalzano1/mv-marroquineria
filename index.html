@@ -330,89 +330,387 @@
           const [search, setSearch] = useState("");
           const [filterCat, setFilterCat] = useState("Todos");
 
-          const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
+          const showToast = (msg) => {
+            setToast(msg);
+            setTimeout(() => setToast(null), 2500);
+          };
 
           const toggleFeatured = (id) => {
-            updateProducts(products.map(p => p.id === id ? { ...p, featured: !p.featured } : p));
+            updateProducts(
+              products.map((p) =>
+                p.id === id ? { ...p, featured: !p.featured } : p
+              )
+            );
             showToast("✓ Destacado actualizado");
           };
+
           const toggleAvailable = (id) => {
-            updateProducts(products.map(p => p.id === id ? { ...p, available: !p.available } : p));
+            updateProducts(
+              products.map((p) =>
+                p.id === id ? { ...p, available: !p.available } : p
+              )
+            );
             showToast("✓ Disponibilidad actualizada");
           };
+
           const deleteProduct = (id) => {
-            updateProducts(products.filter(p => p.id !== id));
+            updateProducts(products.filter((p) => p.id !== id));
             setDeleteConfirm(null);
             showToast("🗑 Producto eliminado");
           };
+
           const saveProduct = (data) => {
             if (editModal === "new") {
-              updateProducts([...products, { ...data, id: Date.now(), featured: false, available: true }]);
+              updateProducts([
+                ...products,
+                {
+                  ...data,
+                  id: Date.now(),
+                  featured: false,
+                  available: true,
+                },
+              ]);
               showToast("✓ Producto creado");
             } else {
-              updateProducts(products.map(p => p.id === data.id ? data : p));
+              updateProducts(
+                products.map((p) => (p.id === data.id ? data : p))
+              );
               showToast("✓ Cambios guardados");
             }
+
             setEditModal(null);
           };
 
           const filtered = products
-            .filter(p => filterCat === "Todos" || p.category === filterCat)
-            .filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+            .filter((p) => filterCat === "Todos" || p.category === filterCat)
+            .filter((p) =>
+              p.name.toLowerCase().includes(search.toLowerCase())
+            );
 
           return (
-            <div style={{ fontFamily:"'DM Sans','Segoe UI',sans-serif", background: BG, color: TEXT, minHeight:"100vh" }}>
+            <div
+              style={{
+                fontFamily: "'DM Sans','Segoe UI',sans-serif",
+                background: BG,
+                color: TEXT,
+                minHeight: "100vh",
+              }}
+            >
               <style>{adminCSS}</style>
-              <nav style={{ background: SURFACE, borderBottom:`1px solid ${BORDER}`, padding:"0 32px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:100 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                  <span style={{ fontFamily:"'Cinzel Decorative',serif", fontSize:18, color: ACCENT, fontWeight:700 }}>MV</span>
-                  <span style={{ fontSize:11, letterSpacing:4, color: MUTED, textTransform:"uppercase" }}>ADMIN</span>
-                  <span style={{ width:1, height:20, background: BORDER, margin:"0 8px" }} />
-                  <span style={{ fontSize:13, color: MUTED }}>Gestión de productos</span>
+
+              {/* ADMIN NAV */}
+              <nav
+                style={{
+                  background: SURFACE,
+                  borderBottom: `1px solid ${BORDER}`,
+                  padding: "0 32px",
+                  height: 64,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 100,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <span
+                    style={{
+                      fontFamily: "'Cinzel Decorative',serif",
+                      fontSize: 18,
+                      color: ACCENT,
+                      fontWeight: 700,
+                    }}
+                  >
+                    MV
+                  </span>
+
+                  <span
+                    style={{
+                      fontSize: 11,
+                      letterSpacing: 4,
+                      color: MUTED,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    ADMIN
+                  </span>
                 </div>
-                <button style={{ background:"none", border:`1px solid rgba(248,113,113,0.3)`, color:"#f87171", borderRadius:6, padding:"7px 16px", cursor:"pointer", fontSize:12, fontFamily:"sans-serif" }} onClick={onExit}>
+
+                <button
+                  style={{
+                    background: "none",
+                    border: `1px solid rgba(248,113,113,0.3)`,
+                    color: "#f87171",
+                    borderRadius: 6,
+                    padding: "7px 16px",
+                    cursor: "pointer",
+                    fontSize: 12,
+                  }}
+                  onClick={onExit}
+                >
                   ← Volver a la tienda
                 </button>
               </nav>
 
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16, padding:"28px 32px 0" }}>
-                {[
-                  { label:"Total productos", value: products.length, color:"#C8873A" },
-                  { label:"Disponibles", value: products.filter(p => p.available).length, color:"#4ade80" },
-                  { label:"Destacados", value: products.filter(p => p.featured).length, color:"#fbbf24" },
-                  { label:"Sin stock", value: products.filter(p => !p.available).length, color:"#f87171" },
-                ].map(st => (
-                  <div key={st.label} style={{ background: SURFACE, border:`1px solid ${BORDER}`, borderRadius:12, padding:20 }} className="stat-card">
-                    <div style={{ fontSize:28, fontWeight:700, color: st.color }}>{st.value}</div>
-                    <div style={{ fontSize:12, color: MUTED, marginTop:4 }}>{st.label}</div>
-                  </div>
-                ))}
-              </div>
+              {/* TOOLBAR */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "24px 32px",
+                  gap: 16,
+                  flexWrap: "wrap",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    background: SURFACE,
+                    border: `1px solid ${BORDER}`,
+                    borderRadius: 8,
+                    padding: "8px 14px",
+                  }}
+                >
+                  <span style={{ color: MUTED }}>⌕</span>
 
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"24px 32px 16px", gap:16 }}>
-                <div style={{ display:"flex", gap:8 }}>
-                  <input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} style={{ ...s.input, width:200 }} />
+                  <input
+                    placeholder="Buscar producto..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      outline: "none",
+                      color: TEXT,
+                      fontSize: 13,
+                      width: 180,
+                    }}
+                  />
                 </div>
-                <button style={s.goldBtn} onClick={() => setEditModal("new")} className="primary-btn">+ Nuevo producto</button>
+
+                <button
+                  style={{
+                    ...s.goldBtn,
+                    padding: "10px 22px",
+                    fontSize: 13,
+                  }}
+                  onClick={() => setEditModal("new")}
+                >
+                  + Nuevo producto
+                </button>
               </div>
 
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:20, padding:"0 32px 40px" }}>
-                {filtered.map((p, i) => (
-                  <div key={p.id} style={{ background: SURFACE, border:`1px solid ${BORDER}`, borderRadius:12, overflow:"hidden", animationDelay:`${i*40}ms` }} className="admin-card">
-                    <div style={{ position:"relative", height:160, background:"rgba(200,135,58,0.06)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:64 }}>
+              {/* PRODUCT GRID */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns:
+                    "repeat(auto-fill,minmax(300px,1fr))",
+                  gap: 20,
+                  padding: "0 32px 40px",
+                }}
+              >
+                {filtered.map((p) => (
+                  <div
+                    key={p.id}
+                    style={{
+                      background: SURFACE,
+                      border: `1px solid ${
+                        p.featured
+                          ? "rgba(200,135,58,0.5)"
+                          : BORDER
+                      }`,
+                      borderRadius: 12,
+                      overflow: "hidden",
+                    }}
+                  >
+                    {/* IMAGE AREA */}
+                    <div
+                      style={{
+                        position: "relative",
+                        height: 160,
+                        background: "rgba(200,135,58,0.06)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 64,
+                      }}
+                    >
                       {p.emoji}
                     </div>
-                    <div style={{ padding:20 }}>
-                      <h3 style={{ margin:0, fontFamily:"'Cormorant Garamond',serif", fontSize:20 }}>{p.name}</h3>
-                      <div style={{ fontSize:18, color: ACCENT, fontWeight:700, marginTop:4 }}>{fmt(p.price)}</div>
-                      <div style={{ display:"flex", gap:8, marginTop:16 }}>
-                        <button style={s.actionBtnPrimary} onClick={() => setEditModal(p)}>EDITAR</button>
-                        <button style={{ ...s.actionBtnIcon, color:"#f87171" }} onClick={() => setDeleteConfirm(p.id)}>🗑</button>
+
+                    {/* INFO */}
+                    <div style={{ padding: "16px 20px 12px" }}>
+                      <span
+                        style={{
+                          fontSize: 10,
+                          letterSpacing: 3,
+                          color: ACCENT,
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {p.category}
+                      </span>
+
+                      <h3
+                        style={{
+                          fontSize: 18,
+                          fontWeight: 700,
+                          margin: "8px 0",
+                        }}
+                      >
+                        {p.name}
+                      </h3>
+
+                      <p
+                        style={{
+                          fontSize: 12,
+                          color: MUTED,
+                          lineHeight: 1.5,
+                          marginBottom: 12,
+                        }}
+                      >
+                        {p.description}
+                      </p>
+
+                      <div
+                        style={{
+                          fontSize: 22,
+                          fontWeight: 700,
+                          color: ACCENT,
+                        }}
+                      >
+                        {fmt(p.price)}
                       </div>
+                    </div>
+
+                    {/* ACTIONS */}
+                    <div
+                      style={{
+                        padding: "12px 20px 16px",
+                        borderTop: `1px solid ${BORDER}`,
+                        display: "flex",
+                        gap: 8,
+                      }}
+                    >
+                      <button
+                        style={s.actionBtnPrimary}
+                        onClick={() => setEditModal(p)}
+                      >
+                        ✎ EDITAR
+                      </button>
+
+                      <button
+                        style={s.actionBtnIcon}
+                        onClick={() => toggleFeatured(p.id)}
+                      >
+                        ⭐
+                      </button>
+
+                      <button
+                        style={s.actionBtnIcon}
+                        onClick={() => toggleAvailable(p.id)}
+                      >
+                        ✓
+                      </button>
+
+                      <button
+                        style={{
+                          ...s.actionBtnIcon,
+                          color: "#f87171",
+                        }}
+                        onClick={() => setDeleteConfirm(p.id)}
+                      >
+                        🗑
+                      </button>
                     </div>
                   </div>
                 ))}
               </div>
+
+              {/* EDIT MODAL */}
+              {editModal && (
+                <EditModal
+                  product={editModal === "new" ? null : editModal}
+                  onSave={saveProduct}
+                  onClose={() => setEditModal(null)}
+                />
+              )}
+
+              {/* DELETE CONFIRM */}
+              {deleteConfirm && (
+                <div
+                  style={s.overlay}
+                  onClick={() => setDeleteConfirm(null)}
+                >
+                  <div
+                    style={{
+                      ...s.authBox,
+                      maxWidth: 380,
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <h3>¿Eliminar producto?</h3>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 12,
+                        marginTop: 24,
+                      }}
+                    >
+                      <button
+                        style={{
+                          flex: 1,
+                          padding: 12,
+                        }}
+                        onClick={() => setDeleteConfirm(null)}
+                      >
+                        Cancelar
+                      </button>
+
+                      <button
+                        style={{
+                          flex: 1,
+                          padding: 12,
+                          background: "#331a1a",
+                          color: "#f87171",
+                        }}
+                        onClick={() =>
+                          deleteProduct(deleteConfirm)
+                        }
+                      >
+                        Sí, eliminar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TOAST */}
+              {toast && (
+                <div
+                  style={{
+                    position: "fixed",
+                    bottom: 28,
+                    right: 28,
+                    background: SURFACE,
+                    border: `1px solid ${BORDER}`,
+                    padding: "14px 22px",
+                    borderRadius: 8,
+                    zIndex: 9999,
+                  }}
+                >
+                  {toast}
+                </div>
+              )}
+            </div>
+          );
+        }
 
               {editModal && (
                 <EditModal
