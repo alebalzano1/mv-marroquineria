@@ -12,6 +12,13 @@
     <script src="https://unpkg.com/htm@3.1.1/mini/index.js"></script>
     <!-- SheetJS for Excel -->
     <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Firebase Compat SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <!-- Firebase Config & Services -->
+    <script src="firebase-config.js"></script>
+    <script src="firebase-service.js"></script>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -165,6 +172,7 @@
       const [view, setView] = useState("shop"); // "shop" | "admin" | "product"
       const [selectedProduct, setSelectedProduct] = useState(null);
       const [authOpen, setAuthOpen] = useState(false);
+      const [dbLoading, setDbLoading] = useState(FirebaseService.isCloudActive());
 
       // State stores
       const [products, setProducts] = useState(loadProducts);
@@ -175,13 +183,153 @@
       const [customers, setCustomers] = useState(loadCustomers);
       const [favorites, setFavorites] = useState(loadFavorites);
 
-      const updateProducts = (next) => { setProducts(next); localStorage.setItem("mv_products", JSON.stringify(next)); };
-      const updateShippingZones = (next) => { setShippingZones(next); localStorage.setItem("mv_shipping_zones", JSON.stringify(next)); };
-      const updateCoupons = (next) => { setCoupons(next); localStorage.setItem("mv_coupons", JSON.stringify(next)); };
-      const updateConfig = (next) => { setConfig(next); localStorage.setItem("mv_config", JSON.stringify(next)); };
-      const updateOrders = (next) => { setOrders(next); localStorage.setItem("mv_orders", JSON.stringify(next)); };
-      const updateCustomers = (next) => { setCustomers(next); localStorage.setItem("mv_customers", JSON.stringify(next)); };
+      // Cargar datos asíncronamente de Firebase al iniciar
+      useEffect(() => {
+        if (!FirebaseService.isCloudActive()) return;
+
+        const syncDatabase = async () => {
+          try {
+            // Autosiembra (Seeding) si está vacía
+            await FirebaseService.autoSeedDatabase(
+              INITIAL_PRODUCTS,
+              INITIAL_SHIPPING_ZONES,
+              INITIAL_COUPONS,
+              INITIAL_CONFIG
+            );
+
+            // Obtener todos los datos en paralelo
+            const [prods, zones, coups, conf, ords, custs] = await Promise.all([
+              FirebaseService.getProducts(),
+              FirebaseService.getShippingZones(),
+              FirebaseService.getCoupons(),
+              FirebaseService.getConfig(),
+              FirebaseService.getOrders(),
+              FirebaseService.getCustomers()
+            ]);
+
+            if (prods) { setProducts(prods); localStorage.setItem("mv_products", JSON.stringify(prods)); }
+            if (zones) { setShippingZones(zones); localStorage.setItem("mv_shipping_zones", JSON.stringify(zones)); }
+            if (coups) { setCoupons(coups); localStorage.setItem("mv_coupons", JSON.stringify(coups)); }
+            if (conf) { setConfig(conf); localStorage.setItem("mv_config", JSON.stringify(conf)); }
+            if (ords) { setOrders(ords); localStorage.setItem("mv_orders", JSON.stringify(ords)); }
+            if (custs) { setCustomers(custs); localStorage.setItem("mv_customers", JSON.stringify(custs)); }
+          } catch (err) {
+            console.error("❌ [Firebase] Error al sincronizar con la nube:", err);
+          } finally {
+            setDbLoading(false);
+          }
+        };
+
+        syncDatabase();
+      }, []);
+
+      const updateProducts = async (next) => {
+        setProducts(next);
+        localStorage.setItem("mv_products", JSON.stringify(next));
+        if (FirebaseService.isCloudActive()) {
+          try {
+            const cloudProds = await FirebaseService.getProducts();
+            const nextIds = next.map(p => p.id);
+            for (const c of cloudProds) {
+              if (!nextIds.includes(c.id)) {
+                await FirebaseService.deleteProduct(c.id);
+              }
+            }
+            for (const p of next) {
+              await FirebaseService.saveProduct(p);
+            }
+          } catch (e) {
+            console.error("[Firebase] Error al guardar productos:", e);
+          }
+        }
+      };
+
+      const updateShippingZones = async (next) => {
+        setShippingZones(next);
+        localStorage.setItem("mv_shipping_zones", JSON.stringify(next));
+        if (FirebaseService.isCloudActive()) {
+          try {
+            for (const z of next) {
+              await FirebaseService.saveShippingZone(z);
+            }
+          } catch (e) {
+            console.error("[Firebase] Error al guardar zonas de envío:", e);
+          }
+        }
+      };
+
+      const updateCoupons = async (next) => {
+        setCoupons(next);
+        localStorage.setItem("mv_coupons", JSON.stringify(next));
+        if (FirebaseService.isCloudActive()) {
+          try {
+            const cloudCoups = await FirebaseService.getCoupons();
+            const nextCodes = next.map(c => c.code);
+            for (const c of cloudCoups) {
+              if (!nextCodes.includes(c.code)) {
+                await FirebaseService.deleteCoupon(c.code);
+              }
+            }
+            for (const c of next) {
+              await FirebaseService.saveCoupon(c);
+            }
+          } catch (e) {
+            console.error("[Firebase] Error al guardar cupones:", e);
+          }
+        }
+      };
+
+      const updateConfig = async (next) => {
+        setConfig(next);
+        localStorage.setItem("mv_config", JSON.stringify(next));
+        if (FirebaseService.isCloudActive()) {
+          try {
+            await FirebaseService.saveConfig(next);
+          } catch (e) {
+            console.error("[Firebase] Error al guardar configuración:", e);
+          }
+        }
+      };
+
+      const updateOrders = async (next) => {
+        setOrders(next);
+        localStorage.setItem("mv_orders", JSON.stringify(next));
+        if (FirebaseService.isCloudActive()) {
+          try {
+            for (const o of next) {
+              await FirebaseService.saveOrder(o);
+            }
+          } catch (e) {
+            console.error("[Firebase] Error al guardar pedidos:", e);
+          }
+        }
+      };
+
+      const updateCustomers = async (next) => {
+        setCustomers(next);
+        localStorage.setItem("mv_customers", JSON.stringify(next));
+        if (FirebaseService.isCloudActive()) {
+          try {
+            for (const c of next) {
+              await FirebaseService.saveCustomer(c);
+            }
+          } catch (e) {
+            console.error("[Firebase] Error al guardar clientes:", e);
+          }
+        }
+      };
+
       const updateFavorites = (next) => { setFavorites(next); localStorage.setItem("mv_favorites", JSON.stringify(next)); };
+
+      if (dbLoading) return html`
+        <div style=${{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: BG, color: TEXT, gap: 16 }}>
+          <div style=${{ width: 44, height: 44, border: "3px solid rgba(200,135,58,0.2)", borderTopColor: ACCENT, borderRadius: "50%", animation: "spin 1s linear infinite" }}></div>
+          <p style=${{ fontFamily: "'Cormorant Garamond',serif", fontSize: 18, letterSpacing: 2, color: MUTED }}>Sincronizando con la nube...</p>
+          <style>
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+          </style>
+        </div>
+      `;
 
       if (view === "admin") return html`
         <${AdminPanel}
@@ -1553,6 +1701,23 @@
     // ─────────────────────────────────────────────
     function EditModal({ product, onSave, onClose }) {
       const isNew = !product;
+      const [uploading, setUploading] = useState(false);
+
+      const handleImageUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setUploading(true);
+        try {
+          const url = await FirebaseService.uploadImage(file);
+          const current = form.imagesStr ? form.imagesStr.split(",").map(c => c.trim()).filter(Boolean) : [];
+          current.push(url);
+          setForm(f => ({ ...f, imagesStr: current.join(", ") }));
+        } catch (err) {
+          alert("Error al subir la imagen: " + err.message);
+        } finally {
+          setUploading(false);
+        }
+      };
 
       const [form, setForm] = useState(product ? {
         ...product,
@@ -1630,9 +1795,35 @@
                 </div>
               </div>
 
-              <!-- FOTOS REALES (URLs) -->
+              <!-- FOTOS REALES (URLs) + CARGADOR CLOUDINARY -->
               <div>
-                <label style=${s.label}>URLs de Fotos (separadas por coma)</label>
+                <label style=${s.label}>Fotos del Producto</label>
+                
+                <!-- Selector de Archivo / Drop Area -->
+                <div style=${{
+                  border: "2px dashed " + BORDER,
+                  borderRadius: 8,
+                  padding: "16px 20px",
+                  background: SURFACE,
+                  textAlign: "center",
+                  cursor: "pointer",
+                  position: "relative",
+                  marginBottom: 12,
+                  transition: "all 0.2s"
+                }} className="photo-upload-zone">
+                  ${uploading ? html`
+                    <div style=${{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                      <div style=${{ width: 18, height: 18, border: "2px solid rgba(200,135,58,0.2)", borderTopColor: ACCENT, borderRadius: "50%", animation: "spin 0.6s linear infinite" }}></div>
+                      <span style=${{ fontSize: 13, color: MUTED }}>Subiendo foto a Cloudinary...</span>
+                    </div>
+                  ` : html`
+                    <span style=${{ fontSize: 13, color: TEXT }}>📸 Arrastrá una foto acá o hacé clic para seleccionar</span>
+                    <input type="file" accept="image/*" onChange=${handleImageUpload} style=${{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%" }} />
+                  `}
+                </div>
+
+                <!-- Fallback manual (lista de URLs) -->
+                <label style=${{ ...s.label, fontSize: 10, color: MUTED, marginTop: 8 }}>URLs de Fotos (separadas por coma)</label>
                 <textarea value=${form.imagesStr} onChange=${e => set("imagesStr", e.target.value)} placeholder="https://ejemplo.com/foto1.jpg, https://ejemplo.com/foto2.jpg" rows="2" style=${{ ...s.input, resize: "vertical" }} />
               </div>
 
